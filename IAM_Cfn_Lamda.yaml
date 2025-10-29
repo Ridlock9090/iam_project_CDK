@@ -1,0 +1,245 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  Creates IAM groups (Dev, OpsManager, FinanceManager, DataAnalysts) with users, login profiles,
+  MFA enforcement, and optional credential storage in AWS Secrets Manager.
+
+Parameters:
+  DevUsers:
+    Type: CommaDelimitedList
+    Default: dev1,dev2,dev3,dev4
+  OpsManagerUsers:
+    Type: CommaDelimitedList
+    Default: ops1,ops2
+  FinanceManagerUsers:
+    Type: CommaDelimitedList
+    Default: finance1
+  DataAnalystUsers:
+    Type: CommaDelimitedList
+    Default: analyst1,analyst2,analyst3
+
+Resources:
+  # =========================================================
+  #  IAM Groups with Managed Policies
+  # =========================================================
+  DevGroup:
+    Type: AWS::IAM::Group
+    Properties:
+      GroupName: Dev
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonEC2FullAccess
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+        - arn:aws:iam::aws:policy/AWSCloudFormationReadOnlyAccess
+
+  OpsManagerGroup:
+    Type: AWS::IAM::Group
+    Properties:
+      GroupName: OpsManager
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonEKSClusterPolicy
+        - arn:aws:iam::aws:policy/CloudWatchFullAccess
+        - arn:aws:iam::aws:policy/AWSLambda_FullAccess
+
+  FinanceManagerGroup:
+    Type: AWS::IAM::Group
+    Properties:
+      GroupName: FinanceManager
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AWSBillingReadOnlyAccess
+        - arn:aws:iam::aws:policy/CostExplorerReadOnlyAccess
+        - arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess
+
+  DataAnalystsGroup:
+    Type: AWS::IAM::Group
+    Properties:
+      GroupName: DataAnalysts
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonAthenaFullAccess
+        - arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess
+        - arn:aws:iam::aws:policy/AWSGlueConsoleFullAccess
+
+  # =========================================================
+  #  MFA Enforcement Policy (attached to all groups)
+  # =========================================================
+  RequireMFA:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: RequireMFA
+      Description: "Enforces MFA for all IAM users before accessing AWS services."
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: BlockMostAccessUnlessMFA
+            Effect: Deny
+            NotAction:
+              - iam:CreateVirtualMFADevice
+              - iam:EnableMFADevice
+              - iam:GetUser
+              - iam:ListMFADevices
+              - iam:ListVirtualMFADevices
+              - iam:ResyncMFADevice
+              - sts:GetSessionToken
+            Resource: "*"
+            Condition:
+              BoolIfExists:
+                aws:MultiFactorAuthPresent: false
+
+  AttachRequireMFAtoGroups:
+    Type: AWS::IAM::GroupPolicyAttachment
+    Properties:
+      GroupName: !Ref DevGroup
+      PolicyArn: !Ref RequireMFA
+
+  AttachRequireMFAtoGroups2:
+    Type: AWS::IAM::GroupPolicyAttachment
+    Properties:
+      GroupName: !Ref OpsManagerGroup
+      PolicyArn: !Ref RequireMFA
+
+  AttachRequireMFAtoGroups3:
+    Type: AWS::IAM::GroupPolicyAttachment
+    Properties:
+      GroupName: !Ref FinanceManagerGroup
+      PolicyArn: !Ref RequireMFA
+
+  AttachRequireMFAtoGroups4:
+    Type: AWS::IAM::GroupPolicyAttachment
+    Properties:
+      GroupName: !Ref DataAnalystsGroup
+      PolicyArn: !Ref RequireMFA
+
+  # =========================================================
+  #  Lambda Role
+  # =========================================================
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: IAMUserManagement
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - iam:CreateUser
+                  - iam:DeleteUser
+                  - iam:AddUserToGroup
+                  - iam:RemoveUserFromGroup
+                  - iam:CreateLoginProfile
+                  - iam:DeleteLoginProfile
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - secretsmanager:CreateSecret
+                  - secretsmanager:DeleteSecret
+                  - secretsmanager:TagResource
+                Resource: "*"
+
+  # =========================================================
+  #  Lambda Function (creates users, assigns groups, sets login, stores password)
+  # =========================================================
+  CreateUsersFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: index.handler
+      Runtime: python3.11
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Timeout: 90
+      Code:
+        ZipFile: |
+          import boto3, cfnresponse, secrets, string, random
+          iam = boto3.client('iam')
+          sm = boto3.client('secretsmanager')
+
+          def generate_password(length=14):
+              chars = string.ascii_letters + string.digits + "!@#$%^&*()-_"
+              return ''.join(random.choice(chars) for _ in range(length))
+
+          def handler(event, context):
+              try:
+                  props = event['ResourceProperties']
+
+                  groups = {
+                      "Dev": props.get("DevUsers", []),
+                      "OpsManager": props.get("OpsManagerUsers", []),
+                      "FinanceManager": props.get("FinanceManagerUsers", []),
+                      "DataAnalysts": props.get("DataAnalystUsers", [])
+                  }
+
+                  for g in groups:
+                      if isinstance(groups[g], str):
+                          groups[g] = [u.strip() for u in groups[g].split(',') if u.strip()]
+
+                  if event['RequestType'] == 'Delete':
+                      for group, users in groups.items():
+                          for user in users:
+                              try:
+                                  iam.delete_login_profile(UserName=user)
+                              except iam.exceptions.NoSuchEntityException:
+                                  pass
+                              try:
+                                  iam.remove_user_from_group(GroupName=group, UserName=user)
+                              except iam.exceptions.NoSuchEntityException:
+                                  pass
+                              try:
+                                  iam.delete_user(UserName=user)
+                              except iam.exceptions.NoSuchEntityException:
+                                  pass
+                              try:
+                                  sm.delete_secret(SecretId=f"IAM/{user}", ForceDeleteWithoutRecovery=True)
+                              except sm.exceptions.ResourceNotFoundException:
+                                  pass
+                      cfnresponse.send(event, context, cfnresponse.SUCCESS, {})
+                      return
+
+                  created = []
+                  for group, users in groups.items():
+                      for user in users:
+                          password = generate_password()
+                          try:
+                              iam.create_user(UserName=user)
+                              iam.create_login_profile(
+                                  UserName=user,
+                                  Password=password,
+                                  PasswordResetRequired=True
+                              )
+                              iam.add_user_to_group(GroupName=group, UserName=user)
+
+                              # Store credentials in Secrets Manager
+                              sm.create_secret(
+                                  Name=f"IAM/{user}",
+                                  Description=f"Login credentials for IAM user {user}",
+                                  SecretString=f'{{"username": "{user}", "password": "{password}"}}'
+                              )
+                              created.append(f"{user}→{group}")
+                          except iam.exceptions.EntityAlreadyExistsException:
+                              pass
+
+                  cfnresponse.send(event, context, cfnresponse.SUCCESS, {"UsersCreated": ", ".join(created)})
+              except Exception as e:
+                  cfnresponse.send(event, context, cfnresponse.FAILED, {"Error": str(e)})
+
+  # =========================================================
+  #  Custom Resource
+  # =========================================================
+  CreateUsersCustomResource:
+    Type: Custom::CreateUsers
+    Properties:
+      ServiceToken: !GetAtt CreateUsersFunction.Arn
+      DevUsers: !Ref DevUsers
+      OpsManagerUsers: !Ref OpsManagerUsers
+      FinanceManagerUsers: !Ref FinanceManagerUsers
+      DataAnalystUsers: !Ref DataAnalystUsers
+
+Outputs:
+  CreatedUsers:
+    Description: IAM users created and assigned to groups.
+    Value: !GetAtt CreateUsersCustomResource.UsersCreated
