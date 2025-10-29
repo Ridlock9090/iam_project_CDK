@@ -29,6 +29,8 @@ Resources:
         - arn:aws:iam::aws:policy/AmazonEC2FullAccess
         - arn:aws:iam::aws:policy/AmazonS3FullAccess
         - arn:aws:iam::aws:policy/AWSCloudFormationReadOnlyAccess
+# Below link for list of managed policy to attach
+# https://docs.aws.amazon.com/aws-managed-policy/latest/reference/policy-list.html
 
   OpsManagerGroup:
     Type: AWS::IAM::Group
