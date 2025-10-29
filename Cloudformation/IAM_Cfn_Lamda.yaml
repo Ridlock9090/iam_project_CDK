@@ -175,11 +175,13 @@ Resources:
                       "FinanceManager": props.get("FinanceManagerUsers", []),
                       "DataAnalysts": props.get("DataAnalystUsers", [])
                   }
-
+          
                   for g in groups:
                       if isinstance(groups[g], str):
-                          groups[g] = [u.strip() for u in groups[g].split(',') if u.strip()]
-
+                          groups[g] = [u.strip() for u in groups[g].split(',') if u.strip()] #.split(',') → splits "dev1,dev2,dev3" into ["dev1", "dev2", "dev3"]
+                          # .strip() → removes spaces around names
+                          # if u.strip() → skips empty entries (like extra commas)
+  
                   if event['RequestType'] == 'Delete':
                       for group, users in groups.items():
                           for user in users:
