@@ -46,10 +46,10 @@ iam = boto3.client('iam')
 sm = boto3.client('secretsmanager')
 ```
 
-boto3: AWS SDK for Python — used to call IAM and Secrets Manager. <br>
-cfnresponse: AWS-provided helper to send a success or failure signal back to CloudFormation. <br>
-iam client: Used to manage IAM users and groups. <br>
-sm client: Used to manage AWS Secrets Manager secrets. <br>
+- boto3:   AWS SDK for Python — used to call IAM and Secrets Manager. <br>
+- cfnresponse:   AWS-provided helper to send a success or failure signal back to CloudFormation. <br>
+- iam client:   Used to manage IAM users and groups. <br>
+- sm client:   Used to manage AWS Secrets Manager secrets. <br>
 
 ### Password Generation Helper
 
