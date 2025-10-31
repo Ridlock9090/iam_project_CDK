@@ -24,17 +24,17 @@ CreateUsersFunction:
 Property&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Meaning
 ---
 
-- Type	            Declares this is a Lambda function resource.  
+- Type:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Declares this is a Lambda function resource.  
 
-- Handler	        The function inside the code that will be executed — here, index.handler (meaning the file “index.py” and the function “handler”).  
+- Handler:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;The function inside the code that will be executed — here, index.handler (meaning the file “index.py” and the function “handler”).  
 
-- Runtime	        Specifies the Python version (python3.11).  
+- Runtime:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Specifies the Python version (python3.11).  
  
-- Role	            The IAM role that gives this Lambda permission to create/delete IAM users, groups, and Secrets Manager secrets.  
+- Role:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;The IAM role that gives this Lambda permission to create/delete IAM users, groups, and Secrets Manager secrets.  
 
-- Timeout	        90 seconds (the maximum time Lambda can run before being stopped).  
+- Timeout:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;90 seconds (the maximum time Lambda can run before being stopped).  
 
-- Code.ZipFile	    Inline Python code (CloudFormation embeds the code directly instead of referencing an external ZIP).  
+- Code.ZipFile:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Inline Python code (CloudFormation embeds the code directly instead of referencing an external ZIP).  
 
 
 
