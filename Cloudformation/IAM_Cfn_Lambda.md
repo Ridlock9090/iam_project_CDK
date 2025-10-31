@@ -21,7 +21,7 @@ CreateUsersFunction:
 ```
 
 # Explanation
-Property&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Meaning
+Property$~~~~~~~~~~~~~$Meaning
 ---
 
 - Type:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Declares this is a Lambda function resource.  
