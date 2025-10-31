@@ -61,6 +61,17 @@ def generate_password(length=14):
 
 Generates a random 14-character password using uppercase and lowercase letters, digits, and special symbols.
 
+Can also use code below for stronger security:
+
+```py
+import secrets, string
+def generate_password(length=14):
+    chars = string.ascii_letters + string.digits + "!@#$%^&*()-_"
+    return ''.join(secrets.choice(chars) for _ in range(length))
+```
+Generates cryptographically secure passwords with 14-characters using uppercase and lowercase letters, digits, and special symbols.
+
+
 ### Main Handler Function
 
 ```py
