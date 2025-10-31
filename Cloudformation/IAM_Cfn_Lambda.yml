@@ -178,9 +178,7 @@ Resources:
           
                   for g in groups: 
                       if isinstance(groups[g], str):
-                          groups[g] = [u.strip() for u in groups[g].split(',') if u.strip()] # .split(',') → splits "dev1,dev2,dev3" into ["dev1", "dev2", "dev3"]
-                          # .strip() → removes spaces around names
-                          # if u.strip() → skips empty entries (like extra commas)
+                          groups[g] = [u.strip() for u in groups[g].split(',') if u.strip()] 
   
                   if event['RequestType'] == 'Delete': # Handles stack deletion
                       for group, users in groups.items():
@@ -230,6 +228,10 @@ Resources:
                   cfnresponse.send(event, context, cfnresponse.SUCCESS, {"UsersCreated": ", ".join(created)})
               except Exception as e:
                   cfnresponse.send(event, context, cfnresponse.FAILED, {"Error": str(e)})
+
+# .split(',') → splits "dev1,dev2,dev3" into ["dev1", "dev2", "dev3"]
+# .strip() → removes spaces around names
+# if u.strip() → skips empty entries (like extra commas)
 
   # =========================================================
   #  Custom Resource
